@@ -15,20 +15,24 @@ docker compose up
 
 After all services have started up, the web UI will be available at: http://localhost:8080. The default account has the username airflow and the password airflow
 
-* Add a records to the list of connections  
-Connection Id: tutorial_pg_conn  
-Connection Type: postgres  
-Host: postgres  
-Schema: airflow  
-Login: airflow  
-Password: airflow  
-Port: 5432
+* Add connections via cli 
 
-    Connection Id: smithwilson_api  
-    Connection Type: HTTP  
-    Host: sw-api   
-    Port: 8000
+```bash
+ docker compose run airflow-cli connections add 'tutorial_pg_conn' \
+    --conn-type 'postgres' \
+    --conn-login 'airflow' \
+    --conn-password 'airflow' \
+    --conn-host 'postgres' \
+    --conn-port '5432' \
+    --conn-schema 'airflow'
+```
 
+```bash
+ docker compose run airflow-cli connections add 'smithwilson_api' \
+    --conn-type 'http' \
+    --conn-host 'sw-api' \
+    --conn-port '8000'
+```
 
 * Stop all services  
 docker compose down
