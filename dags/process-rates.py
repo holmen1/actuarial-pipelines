@@ -8,6 +8,7 @@ from airflow.decorators import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.http.sensors.http import HttpSensor
+from airflow.contrib.sensors.file_sensor import FileSensor
 from airflow.providers.http.operators.http import SimpleHttpOperator
 from airflow.providers.http.hooks.http import HttpHook
 from airflow.operators.python import PythonOperator
@@ -47,6 +48,13 @@ def get_request_data():
     dagrun_timeout=datetime.timedelta(minutes=60),
 )
 def ProjectSwaps():
+    poke_swaps = FileSensor(
+        task_id="poke_swaps",
+        filepath="/opt/airflow/dags/files/swaps.csv",
+        poke_interval=10,
+        timeout=300,
+    )
+
     create_holmen_schema = PostgresOperator(
         task_id="create_holmen1_schema",
         postgres_conn_id="tutorial_pg_conn",
@@ -207,7 +215,7 @@ def ProjectSwaps():
 
     create_holmen_schema >> [create_swap_table, create_swap_temp_table, \
                              create_riskfreerate_table, create_riskfreerate_data_table] >> \
-    get_data() >> merge_data() >> \
+    poke_swaps >> get_data() >> merge_data() >> \
     task_http_sensor_check >> get_projection() >> insert_projection()
 
 
