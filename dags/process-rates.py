@@ -12,6 +12,7 @@ from airflow.contrib.sensors.file_sensor import FileSensor
 from airflow.providers.http.operators.http import SimpleHttpOperator
 from airflow.providers.http.hooks.http import HttpHook
 from airflow.operators.python import PythonOperator
+from airflow.providers.microsoft.azure.operators.container_instances import AzureContainerInstancesOperator
 from airflow.models import XCom
 
 

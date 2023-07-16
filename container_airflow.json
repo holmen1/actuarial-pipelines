@@ -1,0 +1,91 @@
+{
+    "properties": {
+        "sku": "Standard",
+        "provisioningState": "Succeeded",
+        "provisioningTimeoutInSeconds": 1800,
+        "isCustomProvisioningTimeout": false,
+        "containers": [
+            {
+                "name": "azure-tutorial-container",
+                "properties": {
+                    "image": "holmen1/smith-wilson-api",
+                    "ports": [
+                        {
+                            "protocol": "TCP",
+                            "port": 8000
+                        }
+                    ],
+                    "environmentVariables": [
+                        {
+                            "name": "PORT",
+                            "value": "8000"
+                        }
+                    ],
+                    "instanceView": {
+                        "restartCount": 0,
+                        "currentState": {
+                            "state": "Running",
+                            "startTime": "2023-07-17T16:57:17.51Z",
+                            "detailStatus": ""
+                        },
+                        "events": [
+                            {
+                                "count": 1,
+                                "firstTimestamp": "2023-07-17T16:56:55Z",
+                                "lastTimestamp": "2023-07-17T16:56:55Z",
+                                "name": "Pulling",
+                                "message": "pulling image \"holmen1/smith-wilson-api@sha256:75396d15bf01bdc864e727aaa149824a19c7ab68554678b743413c885a66e691\"",
+                                "type": "Normal"
+                            },
+                            {
+                                "count": 1,
+                                "firstTimestamp": "2023-07-17T16:57:07Z",
+                                "lastTimestamp": "2023-07-17T16:57:07Z",
+                                "name": "Pulled",
+                                "message": "Successfully pulled image \"holmen1/smith-wilson-api@sha256:75396d15bf01bdc864e727aaa149824a19c7ab68554678b743413c885a66e691\"",
+                                "type": "Normal"
+                            },
+                            {
+                                "count": 1,
+                                "firstTimestamp": "2023-07-17T16:57:17Z",
+                                "lastTimestamp": "2023-07-17T16:57:17Z",
+                                "name": "Started",
+                                "message": "Started container",
+                                "type": "Normal"
+                            }
+                        ]
+                    },
+                    "resources": {
+                        "requests": {
+                            "memoryInGB": 1.5,
+                            "cpu": 1
+                        }
+                    }
+                }
+            }
+        ],
+        "initContainers": [],
+        "restartPolicy": "Always",
+        "ipAddress": {
+            "ports": [
+                {
+                    "protocol": "TCP",
+                    "port": 8000
+                }
+            ],
+            "ip": "20.54.59.97",
+            "type": "Public",
+            "dnsNameLabel": "aciholmen1",
+            "fqdn": "aciholmen1.northeurope.azurecontainer.io"
+        },
+        "osType": "Linux",
+        "instanceView": {
+            "events": [],
+            "state": "Running"
+        }
+    },
+    "id": "/subscriptions/9eb54f6a-d591-4438-8472-6a5cdff53b85/resourceGroups/actuarial-apps-rg/providers/Microsoft.ContainerInstance/containerGroups/azure-tutorial-container",
+    "name": "azure-tutorial-container",
+    "type": "Microsoft.ContainerInstance/containerGroups",
+    "location": "northeurope"
+}
