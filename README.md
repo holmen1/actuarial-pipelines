@@ -33,6 +33,11 @@ Add connections via cli
     --conn-schema 'airflow'
 ```
 
+```bash
+ docker compose run airflow-cli connections add 'fs_default' \
+    --conn-type 'file'
+```
+
 When running locally, smith-wilson-par are mounted into the container
 ```bash
  docker compose run airflow-cli connections add 'smithwilson_api' \
@@ -77,10 +82,6 @@ Extra:{
 
 
 ## Close down and remove all resources
-```bash
- docker compose run airflow-cli connections add 'fs_default' \
-    --conn-type 'file'
-```
 
 Stop all services
 ```bash
