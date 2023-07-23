@@ -165,6 +165,7 @@ def ProjectSwaps():
         http_hook = HttpHook(method="POST", http_conn_id="smithwilson_api")
         request_data = get_request_data()
         request = request_data['data']
+        print(request)
         response = http_hook.run(
             endpoint="/rfr/api/rates",
             data=json.dumps(request),

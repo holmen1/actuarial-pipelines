@@ -14,7 +14,7 @@ from airflow.providers.microsoft.azure.operators.container_instances import Azur
     catchup=False,
     dagrun_timeout=datetime.timedelta(minutes=60),
 )
-def DeployContainer():
+def DeployContainers():
 
     opr_run_container = AzureContainerInstancesOperator(
         task_id='run_container',
@@ -37,9 +37,30 @@ def DeployContainer():
         environment_variables={'PORT': 8000}
     )
 
-    opr_run_container
+    run_liabilities_container = AzureContainerInstancesOperator(
+        task_id='liabilities_container',
+        ci_conn_id='azure_container_conn_id',
+        registry_conn_id=None,
+        resource_group='actuarial-apps-rg',
+        name='aciliabilities',
+        image='holmen1/estimate-liabilities-api',
+        region='northeurope',
+        cpu=1,
+        memory_in_gb=1.5,
+        ports=[{'protocol': 'TCP', 'port': 80}],
+        restart_policy='Always',
+        ip_address={
+            'type': 'Public',
+            'ports': [{'protocol': 'TCP', 'port': 80}],
+            'dnsNameLabel': 'aciliabilities',
+            'fqdn': 'aciliabilities.northeurope.azurecontainer.io'
+        },
+        environment_variables={'PORT': 8004}
+    )
 
-dag = DeployContainer()
+    [opr_run_container, run_liabilities_container]
+
+dag = DeployContainers()
 
 
 

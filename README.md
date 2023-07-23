@@ -46,6 +46,23 @@ When running locally, smith-wilson-par are mounted into the container
     --conn-port '8000'
 ```
 
+
+Create a container
+```bash
+az container create \
+  --name 'aciliabilities' \
+  --resource-group 'actuarial-apps-rg' \
+  --image 'holmen1/estimate-liabilities-api' \
+  --ports 80 \
+  --dns-name-label 'aciliabilities'
+```
+
+```bash
+ docker compose run airflow-cli connections add 'liabilities_api' \
+    --conn-type 'http' \
+    --conn-host 'aciliabilities.northeurope.azurecontainer.io'
+```
+
 ## DAGs
 ### process-rates
 This DAG creates 3 tables in the database. Then waits for swap.csv to be available on the web. Once it is available, it downloads the file and inserts the data into the database. It then removes any duplicate rows from the database. Then it pings the API, when up posts the data to the API and inserts the response into the database.
@@ -73,8 +90,8 @@ Access control (IAM) -> Add -> Add role assignment -> Role: Contributor -> Selec
 Airflow UI -> Admin -> Connections -> Create  
 Connection Id: azure_container_conn_id  
 Connection Type: Azure Container Instance  
-Login: Application (client) ID   
-Password: Client secret  
+Login: Application (client) ID e586d25a-d60d-409c-8e2a-b9b027fd83f0  
+Password: Client secret kRU8Q~i4x1U.cBpoIRWCOHXH-AO5pfSsYAsDLbCr  
 Extra:{
   "tenantId": "a21218f6-3dd1-4b7c-8c33-cfbaec966166",
   "subscriptionId": "9eb54f6a-d591-4438-8472-6a5cdff53b85"
