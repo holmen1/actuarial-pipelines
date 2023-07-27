@@ -102,6 +102,12 @@ services:
     ports:
       - "8000"
 
+  cashflow-api:
+    image: holmen1/estimate-liabilities-api:latest
+    ports:
+      - "80"
+
+
   airflow-webserver:
     <<: *airflow-common
     command: webserver

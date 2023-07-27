@@ -1,4 +1,4 @@
-# ACTUARIAL-PIPELINES
+# AIRFLOW-PIPELINES
 
 Running Airflow locally in Docker modifiying  
 https://airflow.apache.org/docs/apache-airflow/stable/howto/docker-compose/index.html
@@ -38,14 +38,57 @@ Add connections via cli
     --conn-type 'file'
 ```
 
-When running locally, smith-wilson-par are mounted into the container
+When running locally,  
+smith-wilson-par and esimate-liabilities are mounted into the container
 ```bash
  docker compose run airflow-cli connections add 'smithwilson_api' \
     --conn-type 'http' \
     --conn-host 'sw-api' \
     --conn-port '8000'
 ```
+```bash
+ docker compose run airflow-cli connections add 'liabilities_api' \
+    --conn-type 'http' \
+    --conn-host 'cashflow-api' \
+    --conn-port '80'
+```
 
+
+
+## DAGs
+### process-swaps
+This DAG creates 2 tables in the database. Then waits for swap.csv to be available in the files folder. Once it is available, it downloads the file and inserts the data into the database. It then removes any duplicate rows from the database.
+
+### project-rates
+This DAG creates 2 tables in the database. Then waits for swap insert in database. Once new ValuueDate is available, it pings the API, when up posts the data to the API and inserts the response into the database.
+
+### process-contracts
+This DAG creates 2 tables in the database. Then waits for contract.csv to be available in the files folder. Once it is available, it downloads the file and inserts the data into the database. It then removes any duplicate rows from the database.
+
+### project-cashflows
+This DAG creates a cashflow table in the database.
+Selects a contracts, creates a request to API, and inserts the response into the database.
+
+## Close down and remove all resources
+
+Stop all services
+```bash
+docker compose down
+```
+
+ Stop all services and clean-up
+ ```bash
+docker compose down --volumes --remove-orphans
+```
+
+
+
+## Azure Container Instance
+
+Create a resource group  
+```bash
+az group create --name "actuarial-apps-rg" --location "northeurope"
+```
 
 Create a container
 ```bash
@@ -63,26 +106,13 @@ az container create \
     --conn-host 'aciliabilities.northeurope.azurecontainer.io'
 ```
 
-## DAGs
-### process-rates
-This DAG creates 3 tables in the database. Then waits for swap.csv to be available on the web. Once it is available, it downloads the file and inserts the data into the database. It then removes any duplicate rows from the database. Then it pings the API, when up posts the data to the API and inserts the response into the database.
-Finally it deletes the swap.csv file from the web.
-
-
-
-### deploy-container
-#### Setup Azure
+### Setup for AzureContainerInstancesOperator in deploy-containers.py
 Create a Service Principal in Azure Active Directory:  
 App registrations -> New registration: "airflow-app"  
 select "Accounts in this organizational directory only"  
 In the app registration details page, note down the "Application (client) ID" and the "Directory (tenant) ID"  
 Click on the "Certificates & secrets" button and then click on the "New client secret" button  
 Note down the value of the client secret! 
-
-Create a resource group  
-```bash
-az group create --name "actuarial-apps-rg" --location "northeurope"
-```
 
 Add the service principal to the resource group in with Azure UI:  
 Access control (IAM) -> Add -> Add role assignment -> Role: Contributor -> Select: "airflow-app" -> Save  
@@ -97,14 +127,3 @@ Extra:{
   "subscriptionId": "9eb54f6a-d591-4438-8472-6a5cdff53b85"
 }  
 
-
-## Close down and remove all resources
-
-Stop all services
-```bash
-docker compose down
-```
-
- Stop all services and clean-up
- ```bash
-docker compose down --volumes --remove-orphans

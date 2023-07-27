@@ -41,7 +41,9 @@ def get_request_data(value_date):
     conn = postgres_hook.get_conn()
     cur = conn.cursor()
 
-    cur.execute("SELECT \"Tenor\", \"Value\" FROM holmen.swap WHERE \"ValueDate\" = %s", (value_date,))
+    cur.execute(r"""SELECT "Tenor", "Value" FROM holmen.swap
+                    WHERE "ValueDate" = %s
+                    AND "Tenor" IN (2, 3, 5, 10)""", (value_date,))
     rows = cur.fetchall()
     tenors = [row[0] for row in rows]
     values = [float(row[1]) for row in rows]
@@ -60,18 +62,13 @@ def get_request_data(value_date):
 
 
 @dag(
-    dag_id="process-rates",
+    dag_id="project-rates",
     schedule_interval="0 0 * * *",
     start_date=pendulum.datetime(2021, 1, 1, tz='UTC'),
     catchup=False,
     dagrun_timeout=datetime.timedelta(minutes=60),
 )
-def ProjectSwaps(): 
-    poke_swaps = SwapSensor(
-        task_id="poke_swaps",
-        timeout=300,
-    )
-
+def ProjectRates(): 
     create_riskfreerate_data_table = PostgresOperator(
         task_id="create_riskfree_rate_data_table",
         postgres_conn_id="tutorial_pg_conn",
@@ -97,6 +94,11 @@ def ProjectSwaps():
             );""",
     )
 
+    poke_swaps = SwapSensor(
+        task_id="poke_swaps",
+        timeout=300,
+    )
+
     task_http_sensor_check = HttpSensor(
         task_id="http_sensor_check",
         http_conn_id="smithwilson_api",
@@ -110,7 +112,6 @@ def ProjectSwaps():
         http_hook = HttpHook(method="POST", http_conn_id="smithwilson_api")
         request_data = get_request_data(value_date)
         request = request_data['data']
-        print(request)
         response = http_hook.run(
             endpoint="/rfr/api/rates",
             data=json.dumps(request),
@@ -128,7 +129,7 @@ def ProjectSwaps():
         postgres_hook = PostgresHook(postgres_conn_id="tutorial_pg_conn")
         conn = postgres_hook.get_conn()
         cur = conn.cursor()
-        cur.execute("SELECT MAX(\"ProjectionId\") FROM holmen.rate")
+        cur.execute("""SELECT MAX("ProjectionId") FROM holmen.rate""")
         max_projection_id = cur.fetchone()[0]
         if max_projection_id is None:
             max_projection_id = 0
@@ -161,8 +162,8 @@ def ProjectSwaps():
         conn.close()
 
     [create_riskfreerate_table, create_riskfreerate_data_table] >> \
-    poke_swaps >> \
-    task_http_sensor_check >> get_projection() >> insert_projection()
+    poke_swaps >> task_http_sensor_check >> \
+    get_projection() >> insert_projection()
 
 
-dag = ProjectSwaps()
+dag = ProjectRates()
