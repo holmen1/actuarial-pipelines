@@ -105,7 +105,7 @@ services:
   cashflow-api:
     image: holmen1/estimate-liabilities-api:latest
     ports:
-      - "80"
+      - "8005:80"
 
 
   airflow-webserver:
