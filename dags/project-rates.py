@@ -90,7 +90,8 @@ def ProjectRates():
                 "ValueDate" DATE,
                 "Alpha" NUMERIC,
                 "RequestParameters" TEXT,
-                "LastUpdated" DATE
+                "LastUpdated" DATE,
+                "VerifiedBy" TEXT
             );""",
     )
 
