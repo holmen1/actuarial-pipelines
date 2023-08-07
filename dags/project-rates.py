@@ -53,7 +53,7 @@ def get_request_data(value_date):
         "data": {
             "par_rates": values,
             "par_maturities": tenors,
-            "projection": [1, 151],
+            "projection": [1, 151, 12],
             "ufr": 0.0345,
             "convergence_maturity": 20,
             "tol": 1E-4
@@ -75,6 +75,7 @@ def ProjectRates():
         sql=r"""
             CREATE TABLE IF NOT EXISTS holmen.rate_data (
                 "ProjectionId" INTEGER,
+                Month INTEGER,
                 "Maturity" NUMERIC,
                 "SpotValue" NUMERIC,
                 PRIMARY KEY ("ProjectionId", "Maturity")
@@ -151,11 +152,12 @@ def ProjectRates():
         end_year = request_parameters["data"]["projection"][1]  # not inclusive
         intervals_per_year = request_parameters["data"]["projection"][2] if len(
             request_parameters["data"]["projection"]) == 3 else 1
+        months = np.arange(start_year * 12, (end_year - 1) * 12 + 1)
         maturities = np.arange(start_year, end_year, 1 / intervals_per_year).round(6).tolist()
-        for maturity, value in zip(maturities, projection_result["rfr"]):
+        for month, maturity, value in zip(months, maturities, projection_result["rfr"]):
             cur.execute(
-                r"INSERT INTO holmen.rate_data VALUES (%s, %s, %s)",
-                (max_projection_id, maturity, value),
+                r"INSERT INTO holmen.rate_data VALUES (%s, %s, %s, %s)",
+                (max_projection_id, int(month), maturity, value),
             )
             maturity += 1
         conn.commit()
