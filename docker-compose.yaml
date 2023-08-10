@@ -98,7 +98,7 @@ services:
       - "5432:5432"
 
   sw-api:
-    image: holmen1/smith-wilson-api:latest
+    image: holmen1/smith-wilson-api:monthly
     ports:
       - "8000"
 

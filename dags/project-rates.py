@@ -36,6 +36,7 @@ class SwapSensor(BaseSensorOperator):
         ti.xcom_push(key='max_date', value=max_date)
         return bool(max_date)
 
+
 def get_request_data(value_date):
     postgres_hook = PostgresHook(postgres_conn_id="tutorial_pg_conn")
     conn = postgres_hook.get_conn()
@@ -43,7 +44,8 @@ def get_request_data(value_date):
 
     cur.execute(r"""SELECT "Tenor", "Value" FROM holmen.swap
                     WHERE "ValueDate" = %s
-                    AND "Tenor" IN (2, 3, 5, 10)""", (value_date,))
+                    AND "Tenor" IN (2, 3, 5, 10)
+                    ORDER BY "Tenor";""", (value_date,))
     rows = cur.fetchall()
     tenors = [row[0] for row in rows]
     values = [float(row[1]) for row in rows]
@@ -53,10 +55,11 @@ def get_request_data(value_date):
         "data": {
             "par_rates": values,
             "par_maturities": tenors,
-            "projection": [0, 151, 12],
+            "projection": [1, 151],
             "ufr": 0.0345,
             "convergence_maturity": 20,
-            "tol": 1E-4
+            "tol": 1E-4,
+            "credit_risk_adjustment": 0.001
         }
     }
 
@@ -68,7 +71,7 @@ def get_request_data(value_date):
     catchup=False,
     dagrun_timeout=datetime.timedelta(minutes=60),
 )
-def ProjectRates(): 
+def ProjectRates():
     create_riskfreerate_data_table = PostgresOperator(
         task_id="create_riskfree_rate_data_table",
         postgres_conn_id="tutorial_pg_conn",
@@ -116,7 +119,7 @@ def ProjectRates():
         request_data = get_request_data(value_date)
         request = request_data['data']
         response = http_hook.run(
-            endpoint="/rfr/api/rates",
+            endpoint="/api/monthly",
             data=json.dumps(request),
             headers={"Content-Type": "application/json"},
         )
@@ -149,18 +152,15 @@ def ProjectRates():
             ),
         )
 
-        start_year = request_parameters["data"]["projection"][0]
         end_year = request_parameters["data"]["projection"][1]  # not inclusive
-        intervals_per_year = request_parameters["data"]["projection"][2] if len(
-            request_parameters["data"]["projection"]) == 3 else 1
-        months = np.arange(start_year * 12, (end_year - 1) * 12 + 1)
-        maturities = np.arange(start_year, end_year, 1 / intervals_per_year).round(6).tolist()
-        for month, maturity, value, price in zip(months, maturities, projection_result["rfr"], projection_result["price"]):
+        months = np.arange(0, (end_year - 1) * 12 + 1)
+        maturities = months / 12.0
+        for month, maturity, value, price in zip(months, maturities, projection_result["rfr"],
+                                                 projection_result["price"]):
             cur.execute(
                 r"INSERT INTO holmen.rate_data VALUES (%s, %s, %s, %s, %s)",
                 (max_projection_id, int(month), maturity, value, price),
             )
-            maturity += 1
         conn.commit()
         cur.close()
         conn.close()
