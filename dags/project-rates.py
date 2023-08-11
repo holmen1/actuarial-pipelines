@@ -54,12 +54,7 @@ def get_request_data(value_date):
         "value_date": value_date.strftime("%Y-%m-%d"),
         "data": {
             "par_rates": values,
-            "par_maturities": tenors,
-            "projection": [1, 151],
-            "ufr": 0.0345,
-            "convergence_maturity": 20,
-            "tol": 1E-4,
-            "credit_risk_adjustment": 0.001
+            "par_maturities": tenors
         }
     }
 
@@ -78,7 +73,7 @@ def ProjectRates():
         sql=r"""
             CREATE TABLE IF NOT EXISTS holmen.rate_data (
                 "ProjectionId" INTEGER,
-                Month INTEGER,
+                "Month" INTEGER,
                 "Maturity" NUMERIC,
                 "SpotValue" NUMERIC,
                 "Price" NUMERIC,
@@ -152,7 +147,7 @@ def ProjectRates():
             ),
         )
 
-        end_year = request_parameters["data"]["projection"][1]  # not inclusive
+        end_year = 151  # not inclusive
         months = np.arange(0, (end_year - 1) * 12 + 1)
         maturities = months / 12.0
         for month, maturity, value, price in zip(months, maturities, projection_result["rfr"],
