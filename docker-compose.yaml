@@ -103,7 +103,7 @@ services:
       - "8000"
 
   cashflow-api:
-    image: holmen1/estimate-liabilities-api:latest
+    image: holmen1/estimate-liabilities-api:1.01
     ports:
       - "8005:80"
 
