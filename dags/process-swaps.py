@@ -32,34 +32,35 @@ def ProcessSwaps():
         sql=r"""CREATE SCHEMA IF NOT EXISTS holmen;""",
     )
 
+    create_swap_stage_table = PostgresOperator(
+        task_id="create_swap_stage_table",
+        postgres_conn_id="tutorial_pg_conn",
+        sql=r"""
+            DROP TABLE IF EXISTS holmen.swap_stage;
+            CREATE TABLE holmen.swap_stage (
+                "DL_SNAPSHOT_START_TIME" DATE,
+                "DL_SNAPSHOT_TZ" TEXT,
+                "IDENTIFIER" TEXT,
+                "RC" INTEGER,
+                "PX_LAST" NUMERIC,
+                PRIMARY KEY ("DL_SNAPSHOT_START_TIME", "IDENTIFIER")
+            );""",
+    )
+
     create_swap_table = PostgresOperator(
         task_id="create_swap_table",
         postgres_conn_id="tutorial_pg_conn",
         sql=r"""
             CREATE TABLE IF NOT EXISTS holmen.swap (
                 "ValueDate" DATE,
-                "Currency" TEXT,
+                "Id" TEXT,
                 "Tenor" INTEGER,
                 "SettlementFreq" INTEGER,
                 "Value" NUMERIC,
-                PRIMARY KEY ("ValueDate", "Currency", "Tenor")
+                PRIMARY KEY ("ValueDate", "Id", "Tenor")
             );""",
     )
 
-    create_swap_temp_table = PostgresOperator(
-        task_id="create_swap_temp_table",
-        postgres_conn_id="tutorial_pg_conn",
-        sql=r"""
-            DROP TABLE IF EXISTS holmen.swap_temp;
-            CREATE TABLE holmen.swap_temp (
-                "ValueDate" DATE,
-                "Currency" TEXT,
-                "Tenor" INTEGER,
-                "SettlementFreq" INTEGER,
-                "Value" NUMERIC,
-                PRIMARY KEY ("ValueDate", "Currency", "Tenor")
-            );""",
-    )
 
     @task
     def get_data():
@@ -71,7 +72,7 @@ def ProcessSwaps():
         cur = conn.cursor()
         with open(data_path, "r") as file:
             cur.copy_expert(
-                "COPY holmen.swap_temp FROM STDIN WITH CSV HEADER DELIMITER AS ',' QUOTE '\"'",
+                "COPY holmen.swap_stage FROM STDIN WITH CSV HEADER DELIMITER AS ',' QUOTE '\"'",
                 file,
             )
         conn.commit()
@@ -82,8 +83,13 @@ def ProcessSwaps():
             INSERT INTO holmen.swap
             SELECT *
             FROM (
-                SELECT DISTINCT *
-                FROM holmen.swap_temp
+                SELECT DISTINCT 
+                    "DL_SNAPSHOT_START_TIME" AS "ValueDate",
+                    substring("IDENTIFIER" from '[A-Z]+') as "Id",
+                    substring("IDENTIFIER" from '\d+')::integer as "Tenor",
+                    1 as "SettlementFreq",
+                    "PX_LAST" / 100 as "Value"
+                FROM holmen.swap_stage
             ) t
             ON CONFLICT ON CONSTRAINT swap_pkey DO UPDATE
             SET "SettlementFreq" = excluded."SettlementFreq",
@@ -100,7 +106,7 @@ def ProcessSwaps():
             return 1
 
 
-    create_holmen_schema >> [create_swap_table, create_swap_temp_table] >> \
+    create_holmen_schema >> [create_swap_table, create_swap_stage_table] >> \
     poke_swaps >> get_data() >> merge_data()
 
 
