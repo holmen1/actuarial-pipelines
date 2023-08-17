@@ -20,38 +20,40 @@ class SwapSensor(BaseSensorOperator):
         pg_hook = PostgresHook(postgres_conn_id='tutorial_pg_conn')
         conn = pg_hook.get_conn()
         cursor = conn.cursor()
-        cursor.execute("""
-            SELECT MAX("ValueDate")
-            FROM holmen.swap
-            WHERE \"ValueDate\" NOT IN (
-                SELECT DISTINCT \"ValueDate\"
-                FROM holmen.rate
+        cursor.execute(r"""
+                        SELECT DISTINCT "ValueDate", "Id"
+                        FROM holmen.swap s
+                        WHERE NOT EXISTS (
+                            SELECT 1
+                            FROM holmen.rate r
+                        WHERE r."ValueDate" = s."ValueDate" AND r."SwapId" = s."Id"
             )
         """)
-        max_date = cursor.fetchone()[0]
+        not_projected_swaps = cursor.fetchall()
         cursor.close()
         conn.close()
 
         ti = context['ti']
-        ti.xcom_push(key='max_date', value=max_date)
-        return bool(max_date)
+        ti.xcom_push(key='swaps', value=not_projected_swaps)
+        return bool(not_projected_swaps)
 
 
-def get_request_data(value_date):
+def get_request_data(value_date, id):
     postgres_hook = PostgresHook(postgres_conn_id="tutorial_pg_conn")
     conn = postgres_hook.get_conn()
     cur = conn.cursor()
 
     cur.execute(r"""SELECT "Tenor", "Value" FROM holmen.swap
-                    WHERE "ValueDate" = %s
+                    WHERE "ValueDate" = %s AND "Id" = %s
                     AND "Tenor" IN (2, 3, 5, 10)
-                    ORDER BY "Tenor";""", (value_date,))
+                    ORDER BY "Tenor";""", (value_date, id,))
     rows = cur.fetchall()
     tenors = [row[0] for row in rows]
     values = [float(row[1]) for row in rows]
 
     return {
         "value_date": value_date.strftime("%Y-%m-%d"),
+        "id": id,
         "data": {
             "par_rates": values,
             "par_maturities": tenors
@@ -88,6 +90,7 @@ def ProjectRates():
             CREATE TABLE IF NOT EXISTS holmen.rate (
                 "ProjectionId" INTEGER PRIMARY KEY,
                 "ValueDate" DATE,
+                "SwapId" TEXT,
                 "Alpha" NUMERIC,
                 "RequestParameters" TEXT,
                 "LastUpdated" DATE,
@@ -109,9 +112,12 @@ def ProjectRates():
     @task
     def get_projection(**kwargs):
         ti = kwargs['ti']
-        value_date = ti.xcom_pull(key='max_date', task_ids='poke_swaps')
+        swap = ti.xcom_pull(key='swaps', task_ids='poke_swaps')[0]
+        value_date = swap[0]
+        id = swap[1]
+
         http_hook = HttpHook(method="POST", http_conn_id="smithwilson_api")
-        request_data = get_request_data(value_date)
+        request_data = get_request_data(value_date, id)
         request = request_data['data']
         response = http_hook.run(
             endpoint="/api/monthly",
@@ -137,10 +143,11 @@ def ProjectRates():
         else:
             max_projection_id += 1
         cur.execute(
-            "INSERT INTO holmen.rate VALUES (%s, %s, %s, %s, %s)",
+            "INSERT INTO holmen.rate VALUES (%s, %s, %s, %s, %s, %s)",
             (
                 max_projection_id,
                 request_parameters["value_date"],
+                request_parameters["id"],
                 projection_result["alpha"],
                 json.dumps(request_parameters["data"]),
                 datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
