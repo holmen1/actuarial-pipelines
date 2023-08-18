@@ -8,7 +8,6 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.http.sensors.http import HttpSensor
 from airflow.providers.http.hooks.http import HttpHook
-from airflow.models import XCom
 from airflow.sensors.base_sensor_operator import BaseSensorOperator
 
 
@@ -62,7 +61,7 @@ def get_request_data(value_date, id):
 
 
 @dag(
-    dag_id="project-eiopa-rates",
+    dag_id="project-sw-rates",
     schedule_interval="0 0 * * *",
     start_date=pendulum.datetime(2021, 1, 1, tz='UTC'),
     catchup=False,
