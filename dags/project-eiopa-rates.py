@@ -62,7 +62,7 @@ def get_request_data(value_date, id):
 
 
 @dag(
-    dag_id="project-rates",
+    dag_id="project-eiopa-rates",
     schedule_interval="0 0 * * *",
     start_date=pendulum.datetime(2021, 1, 1, tz='UTC'),
     catchup=False,

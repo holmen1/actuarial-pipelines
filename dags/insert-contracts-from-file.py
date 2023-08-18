@@ -11,7 +11,7 @@ from airflow.contrib.sensors.file_sensor import FileSensor
 
 
 @dag(
-    dag_id="process-contracts",
+    dag_id="insert_contracts_from_file",
     schedule_interval="0 0 * * *",
     start_date=pendulum.datetime(2021, 1, 1, tz='UTC'),
     catchup=False,

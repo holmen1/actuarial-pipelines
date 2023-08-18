@@ -41,7 +41,7 @@ def get_request_data():
     }
 
 @dag(
-    dag_id="project-cashflows",
+    dag_id="project-estimated-cashflows",
     schedule_interval="0 0 * * *",
     start_date=pendulum.datetime(2021, 1, 1, tz='UTC'),
     catchup=False,
@@ -50,7 +50,7 @@ def get_request_data():
 def ProjectCashflows():
 
     create_holmen_schema = PostgresOperator(
-        task_id="create_holmen1_schema",
+        task_id="create_holmen_schema",
         postgres_conn_id="tutorial_pg_conn",
         sql=r"""CREATE SCHEMA IF NOT EXISTS holmen;""",
     )
@@ -87,11 +87,9 @@ def ProjectCashflows():
         conn = postgres_hook.get_conn()
         cur = conn.cursor()
         cur.execute("""TRUNCATE TABLE holmen.cashflow""")
-        month = 0
         for benefit in response.json():
             cur.execute("""INSERT INTO holmen.cashflow VALUES (%s, %s, %s, %s)""",
-            (request['contractNo'], request['valueDate'], month, benefit))
-            month += 1
+            (request['contractNo'], request['valueDate'], benefit['month'], benefit['benefit']))
         conn.commit()
 
 
