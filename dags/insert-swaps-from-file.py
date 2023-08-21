@@ -38,12 +38,10 @@ def ProcessSwaps():
         sql=r"""
             DROP TABLE IF EXISTS holmen.swap_stage;
             CREATE TABLE holmen.swap_stage (
-                "DL_SNAPSHOT_START_TIME" DATE,
-                "DL_SNAPSHOT_TZ" TEXT,
+                "VALUE_DATE" DATE,
                 "IDENTIFIER" TEXT,
-                "RC" INTEGER,
                 "PX_LAST" NUMERIC,
-                PRIMARY KEY ("DL_SNAPSHOT_START_TIME", "IDENTIFIER")
+                PRIMARY KEY ("VALUE_DATE", "IDENTIFIER")
             );""",
     )
 
@@ -72,7 +70,7 @@ def ProcessSwaps():
         cur = conn.cursor()
         with open(data_path, "r") as file:
             cur.copy_expert(
-                "COPY holmen.swap_stage FROM STDIN WITH CSV HEADER DELIMITER AS ',' QUOTE '\"'",
+                "COPY holmen.swap_stage FROM STDIN WITH CSV HEADER DELIMITER AS ';' QUOTE '\"'",
                 file,
             )
         conn.commit()
@@ -84,11 +82,11 @@ def ProcessSwaps():
             SELECT *
             FROM (
                 SELECT DISTINCT 
-                    "DL_SNAPSHOT_START_TIME" AS "ValueDate",
-                    substring("IDENTIFIER" from '[A-Z]+') as "Id",
-                    substring("IDENTIFIER" from '\d+')::integer as "Tenor",
+                    "VALUE_DATE" AS "ValueDate",
+                    substring("IDENTIFIER" from '[A-Z]+') AS "Id",
+                    substring("IDENTIFIER" from '\d+')::integer AS "Tenor",
                     1 as "SettlementFreq",
-                    "PX_LAST" / 100 as "Value"
+                    "PX_LAST" AS "Value"
                 FROM holmen.swap_stage
             ) t
             ON CONFLICT ON CONSTRAINT swap_pkey DO UPDATE

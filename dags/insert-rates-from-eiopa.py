@@ -179,7 +179,7 @@ def InsertRates():
                 r"""UPDATE holmen.rate_data SET "Price" = %s WHERE "ProjectionId" = %s AND "Month" = %s""",
                 (value, eiopa_id, month,),
             )
-            if abs(value) > 2: # 2 bps
+            if abs(value) > 1.2: # 1.2 bps
                 residual_within_tolerance = False
 
         if residual_within_tolerance:
