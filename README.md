@@ -56,16 +56,20 @@ smith-wilson-par and esimate-liabilities are mounted into the container
 
 
 ## DAGs
-### process-swaps
-This DAG creates 2 tables in the database. Then waits for swap.csv to be available in the files folder. Once it is available, it downloads the file and inserts the data into the database. It then removes any duplicate rows from the database.
+### insert-swaps-from-file
+This DAG creates 2 tables in the database. Then waits for swap.csv to be available in the files folder. Once it is available, it downloads the file and inserts the data into the database.
+If key already exists, it updates the rows.
 
-### project-rates
-This DAG creates 2 tables in the database. Then waits for swap insert in database. Once new ValuueDate is available, it pings the API, when up posts the data to the API and inserts the response into the database.
+### project-sw-rates
+This DAG creates 2 tables in the database. Then waits for swap insert in database. Once new ValueDate is available, it pings the API, when up posts the data to the API and inserts the response into the database.
 
-### process-contracts
+### insert-rates-from-eiopa
+This DAG creates 2 tables in the database. Then waits for eiopa.csv to be available in the files folder. Once it is available, it downloads the file and inserts the data into the database.
+
+### insert-contracts-from-file
 This DAG creates 2 tables in the database. Then waits for contract.csv to be available in the files folder. Once it is available, it downloads the file and inserts the data into the database. It then removes any duplicate rows from the database.
 
-### project-cashflows
+### project-estimated-cashflows
 This DAG creates a cashflow table in the database.
 Selects a contracts, creates a request to API, and inserts the response into the database.
 

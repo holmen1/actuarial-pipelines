@@ -1,5 +1,4 @@
 import datetime
-import json
 import pendulum
 import os
 import numpy as np
@@ -8,7 +7,7 @@ from airflow.decorators import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.contrib.sensors.file_sensor import FileSensor
-
+from airflow.operators.bash import BashOperator
 
 
 @dag(
@@ -55,10 +54,10 @@ def ProcessSwaps():
                 "Tenor" INTEGER,
                 "SettlementFreq" INTEGER,
                 "Value" NUMERIC,
+                "LastUpdated" TIMESTAMP,
                 PRIMARY KEY ("ValueDate", "Id", "Tenor")
             );""",
     )
-
 
     @task
     def get_data():
@@ -76,7 +75,10 @@ def ProcessSwaps():
         conn.commit()
 
     @task
-    def merge_data():
+    def merge_data(**kwargs):
+        ti = kwargs['ti']
+        now = datetime.datetime.now()
+        ti.xcom_push(key='merge_timestamp', value=now.strftime("%Y_%m_%d_%H%M%S"))
         sql = r"""
             INSERT INTO holmen.swap
             SELECT *
@@ -86,26 +88,32 @@ def ProcessSwaps():
                     substring("IDENTIFIER" from '[A-Z]+') AS "Id",
                     substring("IDENTIFIER" from '\d+')::integer AS "Tenor",
                     1 as "SettlementFreq",
-                    "PX_LAST" AS "Value"
+                    "PX_LAST" AS "Value",
+                    %s AS "LastUpdated"
                 FROM holmen.swap_stage
             ) t
             ON CONFLICT ON CONSTRAINT swap_pkey DO UPDATE
             SET "SettlementFreq" = excluded."SettlementFreq",
-                "Value" = excluded."Value";
+                "Value" = excluded."Value",
+                "LastUpdated" = excluded."LastUpdated";
         """
         try:
             postgres_hook = PostgresHook(postgres_conn_id="tutorial_pg_conn")
             conn = postgres_hook.get_conn()
             cur = conn.cursor()
-            cur.execute(sql)
+            cur.execute(sql, (now,))
             conn.commit()
             return 0
         except Exception as e:
             return 1
 
+    archive_data = BashOperator(
+        task_id='archive_data',
+        bash_command='mv /opt/airflow/dags/files/swaps.csv /opt/airflow/dags/files/archive/swaps_{{ ti.xcom_pull(key="merge_timestamp", task_ids="merge_data") }}.csv'
+    )
 
     create_holmen_schema >> [create_swap_table, create_swap_stage_table] >> \
-    poke_swaps >> get_data() >> merge_data()
+    poke_swaps >> get_data() >> merge_data() >> archive_data
 
 
 dag = ProcessSwaps()
